@@ -23,9 +23,9 @@ class AnkiImageImport(QDialog):
         mainLayout.addWidget(self.formGroupBox)
         mainLayout.addWidget(buttonBox)
 
+        # setting  the fixed width of window
         width = 300
         height = 200
-        # setting  the fixed width of window
         self.setFixedWidth(width)
         self.setFixedHeight(height)
 
@@ -41,6 +41,7 @@ class AnkiImageImport(QDialog):
         btn.setMaximumWidth(20)
         hbox = QHBoxLayout()
 
+        # Folder path
         self.file_path_box = QLineEdit()
         self.file_path_box.setReadOnly(True)
         hbox.addWidget(self.file_path_box)
@@ -68,18 +69,37 @@ class AnkiImageImport(QDialog):
 
         # Check Boxes
         hbox = QHBoxLayout()
-        self.duplicate_checkbox = QCheckBox("Duplicates")
-        r2 = QCheckBox("Delete")
-        hbox.addWidget(self.duplicate_checkbox, 0, Qt.AlignRight)
-        hbox.addWidget(r2, 0)
+        self.subdirectory_checkbox = QCheckBox("Search Subdirectories")
+        self.subdirectory_checkbox.setChecked(False)
+        # r2 = QCheckBox("Delete")
+        hbox.addWidget(self.subdirectory_checkbox, 0, Qt.AlignRight)
+        # hbox.addWidget(r2, 0)
         layout.addRow(hbox)
 
         self.formGroupBox.setLayout(layout)
 
     def GetFile(self):
-        self.folderpath = QFileDialog.getExistingDirectory(
-            self, 'Select Folder')
+        self.subdirectory_checkbox.setEnabled(False)
+
+        # Get path to Image Folder
+        self.folderpath = QFileDialog.getExistingDirectory(self, 'Select Folder')
+        #showInfo("folderpath\n{}".format(self.folderpath))
+
+        if self.folderpath == "": return    # No path selected
+        
         self.file_path_box.setText(self.folderpath)
+
+        self.image_paths = []
+
+        for path, subdirs, files in os.walk(self.folderpath):
+            for image_name in files:
+                if image_name.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    self.image_paths.append(os.path.join(path, image_name))
+
+            if self.subdirectory_checkbox.isChecked() is False: break
+
+        self.formGroupBox.setTitle("{} images found".format(len(self.image_paths)))
+        self.subdirectory_checkbox.setEnabled(True)
 
     def UpdateFields(self):
         self.fields_comboBox.clear()
@@ -111,25 +131,22 @@ class AnkiImageImport(QDialog):
         fields = mw.col.models.fieldMap(set_model)
         field_index = fields[selected_field][0]
 
+        for image in self.image_paths:
+            # image_path = os.path.join(path, image_name)
 
-        for path, subdirs, files in os.walk(self.folderpath):
-            for image_name in files:
-                if image_name.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    image_path = os.path.join(path, image_name)
+            # Write image to collection.media folder and return its new Filename
+            new_filename = mw.col.media.add_file(image_path)
 
-                    # Write image to collection.media folder and return its new Filename
-                    new_filename = mw.col.media.add_file(image_path)
+            # Create Cards in selected deck with Images selected
+            showInfo("{}".format(new_filename))
 
-                    # Create Cards in selected deck with Images selected
-                    showInfo("{}".format(new_filename))
+            new_note = mw.col.newNote()
+            new_note.model()['did'] = deck['id']
 
-                    new_note = mw.col.newNote()
-                    new_note.model()['did'] = deck['id']
+            image_field = '<img src="' + new_filename + '" />'
+            new_note.fields[field_index] = image_field
 
-                    image_field = '<img src="' + new_filename + '" />'
-                    new_note.fields[field_index] = image_field
-
-                    mw.col.addNote(new_note)
+            mw.col.addNote(new_note)
 
         mw.col.save()
 
