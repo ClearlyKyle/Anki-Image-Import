@@ -24,7 +24,6 @@ class AnkiImageImport(QDialog):
         self.setLayout(mainLayout)
         self.setWindowTitle("Anki Picture Importer - Settings")
 
-
     def CreateFormGroupBox(self):
         self.formGroupBox = QGroupBox("Settings")
         layout = QFormLayout()
@@ -175,38 +174,6 @@ class AnkiImageImport(QDialog):
 
         mw.col.save()
         showInfo("Sucess!")
-
-        
-#class ProgressWindow(QDialog):
-    #def __init__(self, parent=None):
-    #    super(ProgressWindow, self).__init__(parent=parent)
-    #    QDialog.__init__(self)
-
-    #    self.setWindowTitle("Progress")
-
-    #    self.pbar = QProgressBar(self)
-    #    self.pbar.setValue(0)
-
-    #    self.resize(300, 100)
-
-    #    self.vbox = QVBoxLayout()
-    #    self.vbox.addWidget(self.pbar)
-    #    self.setLayout(self.vbox)
-
-    #def StartProcess(self, deck, field_index, image_paths):
-    #    self.deck = deck
-    #    self.field_index = field_index
-    #    self.image_paths = image_paths
-
-    #    self.show()
-
-    #    self.pbar.setValue(0)
-        
-
-    #def progress_update(self, msg):
-    #    self.pbar.setValue(msg)
-    #    #if self.pbar.value() == 100:
-    #    #    self.pbar.setValue(0)
 
 
 def StartApplication() -> None:
