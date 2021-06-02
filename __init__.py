@@ -5,16 +5,14 @@ import time
 
 
 class AnkiImageImport(QDialog):
-    # _signal = pyqtSignal(int)
     def __init__(self):
-        QDialog.__init__(self, parent=mw)
-        # super(AnkiImageImport, self).__init__()
+        super(AnkiImageImport, self).__init__(parent=mw)
 
         self.CreateFormGroupBox()
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttonBox.accepted.connect(self.StartButtonFunction)
-        buttonBox.rejected.connect(lambda: self.close())
+        buttonBox.rejected.connect(self.reject)
 
         mainLayout = QVBoxLayout()
         mainLayout.addWidget(self.formGroupBox)
@@ -25,6 +23,7 @@ class AnkiImageImport(QDialog):
 
         self.setLayout(mainLayout)
         self.setWindowTitle("Anki Picture Importer - Settings")
+
 
     def CreateFormGroupBox(self):
         self.formGroupBox = QGroupBox("Settings")
@@ -132,37 +131,25 @@ class AnkiImageImport(QDialog):
         fields = mw.col.models.fieldMap(set_model)
         self.field_index = fields[selected_field][0]
 
-        # Open Progress Bar window
-        self.hide()
-        ProgressWindow(self.deck, self.field_index, self.image_paths)
-        self.show()
-        
+        # Start Processing New Cards
+        # self.hide()
+        self.GenerateNewCards()
+        # self.show()
 
+    def GenerateNewCards(self):
+        progress = QProgressDialog(self, Qt.WindowTitleHint)    # remove "?" hint button
+        progress.setWindowModality(Qt.ApplicationModal)
+        progress.setLabelText("Generating Cards from Images...")
+        progress.setMaximum(100)
+        progress.setMinimumDuration(0)      # time delay before showing progress bar
+        progress.setCancelButton(None)      # remove cancel button
+        progress.setMinimumWidth(350)       # window width
+        progress.setAutoClose(True)         # close after 100%
 
-class ProgressWindow(QDialog):
-    def __init__(self, deck, field_index, image_paths):
-        QDialog.__init__(self, parent=mw)
+        progress.setValue(0)
+        progress.setValue(1)
+        progress.setValue(0)
 
-        self.setWindowTitle("Progress")
-
-        self.pbar = QProgressBar(self)
-        self.pbar.setValue(0)
-
-        self.resize(300, 100)
-
-        self.vbox = QVBoxLayout()
-        self.vbox.addWidget(self.pbar)
-        self.setLayout(self.vbox)
-
-        self.deck = deck
-        self.field_index = field_index
-        self.image_paths = image_paths
-
-        self.show()
-
-        self.StartProcess()
-
-    def StartProcess(self):
         progressbar_steps = 100 / len(self.image_paths)
 
         for idx, image_path in enumerate(self.image_paths):
@@ -179,23 +166,47 @@ class ProgressWindow(QDialog):
             mw.col.addNote(new_note)
 
             # progressbar.setValue(idx * progressbar_steps)
-            self.progress_update((idx + 1) * progressbar_steps)
+            progress.setValue((idx + 1) * progressbar_steps)
 
-            time.sleep(0.1)
+            if(progress.wasCanceled()):
+                break
+
+            time.sleep(0.05)
 
         mw.col.save()
+        showInfo("Sucess!")
 
-    def GoToMainWindow(self):
-        self.window = AnkiImageImport()
-        self.window.show()
-        self.close()
+        
+#class ProgressWindow(QDialog):
+    #def __init__(self, parent=None):
+    #    super(ProgressWindow, self).__init__(parent=parent)
+    #    QDialog.__init__(self)
 
-    def progress_update(self, msg):
-        self.pbar.setValue(msg)
-        showInfo("PROGRESS\n{}".format(msg))
-        if self.pbar.value() == 100:
-            self.pbar.setValue(0)
-            self.close()
+    #    self.setWindowTitle("Progress")
+
+    #    self.pbar = QProgressBar(self)
+    #    self.pbar.setValue(0)
+
+    #    self.resize(300, 100)
+
+    #    self.vbox = QVBoxLayout()
+    #    self.vbox.addWidget(self.pbar)
+    #    self.setLayout(self.vbox)
+
+    #def StartProcess(self, deck, field_index, image_paths):
+    #    self.deck = deck
+    #    self.field_index = field_index
+    #    self.image_paths = image_paths
+
+    #    self.show()
+
+    #    self.pbar.setValue(0)
+        
+
+    #def progress_update(self, msg):
+    #    self.pbar.setValue(msg)
+    #    #if self.pbar.value() == 100:
+    #    #    self.pbar.setValue(0)
 
 
 def StartApplication() -> None:
