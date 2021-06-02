@@ -1,33 +1,25 @@
-import base64
 from aqt import mw
 from aqt.utils import showInfo, qconnect
 from aqt.qt import *
+import time
 
 
 class AnkiImageImport(QDialog):
-    NumGridRows = 3
-    NumButtons = 4
-
     def __init__(self):
-        QDialog.__init__(self, parent=mw)
-        # super(AnkiImageImport, self).__init__()
+        super(AnkiImageImport, self).__init__(parent=mw)
 
         self.CreateFormGroupBox()
 
-        buttonBox = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttonBox.accepted.connect(self.StartButtonFunction)
-        buttonBox.rejected.connect(self.OnReject)
+        buttonBox.rejected.connect(self.reject)
 
         mainLayout = QVBoxLayout()
         mainLayout.addWidget(self.formGroupBox)
         mainLayout.addWidget(buttonBox)
 
-        width = 300
-        height = 200
-        # setting  the fixed width of window
-        self.setFixedWidth(width)
-        self.setFixedHeight(height)
+        self.setFixedWidth(300)
+        self.setFixedHeight(200)
 
         self.setLayout(mainLayout)
         self.setWindowTitle("Anki Picture Importer - Settings")
@@ -41,6 +33,7 @@ class AnkiImageImport(QDialog):
         btn.setMaximumWidth(20)
         hbox = QHBoxLayout()
 
+        # Folder path
         self.file_path_box = QLineEdit()
         self.file_path_box.setReadOnly(True)
         hbox.addWidget(self.file_path_box)
@@ -68,18 +61,49 @@ class AnkiImageImport(QDialog):
 
         # Check Boxes
         hbox = QHBoxLayout()
-        self.duplicate_checkbox = QCheckBox("Duplicates")
-        r2 = QCheckBox("Delete")
-        hbox.addWidget(self.duplicate_checkbox, 0, Qt.AlignRight)
-        hbox.addWidget(r2, 0)
+        self.subdirectory_checkbox = QCheckBox("Search Subdirectories")
+        self.subdirectory_checkbox.setChecked(False)
+        self.subdirectory_checkbox.toggled.connect(self.SubDirCheckBoxClicked)
+        hbox.addWidget(self.subdirectory_checkbox, 0, Qt.AlignCenter)
         layout.addRow(hbox)
 
         self.formGroupBox.setLayout(layout)
 
     def GetFile(self):
-        self.folderpath = QFileDialog.getExistingDirectory(
-            self, 'Select Folder')
+        self.subdirectory_checkbox.setEnabled(False)
+
+        # Get path to Image Folder
+        self.folderpath = QFileDialog.getExistingDirectory(self, "Select Folder")
+        # showInfo("folderpath\n{}".format(self.folderpath))
+
+        if self.folderpath == "":
+            return  # No path selected
+
         self.file_path_box.setText(self.folderpath)
+
+        self.GetFilePaths(self.folderpath)
+
+        self.subdirectory_checkbox.setEnabled(True)
+
+    def GetFilePaths(self, folder_path):
+        self.image_paths = []
+        for path, subdirs, files in os.walk(folder_path):
+            for image_name in files:
+                if image_name.lower().endswith((".png", ".jpg", ".jpeg")):
+                    self.image_paths.append(os.path.join(path, image_name))
+
+            if self.subdirectory_checkbox.isChecked() is False:
+                break
+
+        self.formGroupBox.setTitle("{} images found".format(len(self.image_paths)))
+
+    def SubDirCheckBoxClicked(self):
+        if self.folderpath == "":
+            return  # No path selected
+
+        self.subdirectory_checkbox.setEnabled(False)
+        self.GetFilePaths(self.folderpath)
+        self.subdirectory_checkbox.setEnabled(True)
 
     def UpdateFields(self):
         self.fields_comboBox.clear()
@@ -91,51 +115,65 @@ class AnkiImageImport(QDialog):
         self.fields_comboBox.addItems(fields)
 
     def StartButtonFunction(self):
-        if self.duplicate_checkbox.isChecked():
-            showInfo("{}".format("Check Box Is True"))
-
         selected_deck = self.deck_comboBox.currentText()
         selected_model = self.model_comboBox.currentText()
         selected_field = self.fields_comboBox.currentText()
 
         # Set the model
         set_model = mw.col.models.byName(selected_model)
-        mw.col.decks.current()['mid'] = set_model['id']
-        showInfo("MODEL\n{}".format(set_model))
+        mw.col.decks.current()["mid"] = set_model["id"]
 
         # Get the deck
-        deck = mw.col.decks.byName(selected_deck)
-        showInfo("DECK\n{}".format(deck))
+        self.deck = mw.col.decks.byName(selected_deck)
 
         # Fields
         fields = mw.col.models.fieldMap(set_model)
-        field_index = fields[selected_field][0]
+        self.field_index = fields[selected_field][0]
 
+        # Start Processing New Cards
+        # self.hide()
+        self.GenerateNewCards()
+        # self.show()
 
-        for path, subdirs, files in os.walk(self.folderpath):
-            for image_name in files:
-                if image_name.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    image_path = os.path.join(path, image_name)
+    def GenerateNewCards(self):
+        progress = QProgressDialog(self, Qt.WindowTitleHint)    # remove "?" hint button
+        progress.setWindowModality(Qt.ApplicationModal)
+        progress.setLabelText("Generating Cards from Images...")
+        progress.setMaximum(100)
+        progress.setMinimumDuration(0)      # time delay before showing progress bar
+        progress.setCancelButton(None)      # remove cancel button
+        progress.setMinimumWidth(350)       # window width
+        progress.setAutoClose(True)         # close after 100%
 
-                    # Write image to collection.media folder and return its new Filename
-                    new_filename = mw.col.media.add_file(image_path)
+        progress.setValue(0)
+        progress.setValue(1)
+        progress.setValue(0)
 
-                    # Create Cards in selected deck with Images selected
-                    showInfo("{}".format(new_filename))
+        progressbar_steps = 100 / len(self.image_paths)
 
-                    new_note = mw.col.newNote()
-                    new_note.model()['did'] = deck['id']
+        for idx, image_path in enumerate(self.image_paths):
+            # Write image to collection.media folder and return its new Filename
+            new_filename = mw.col.media.add_file(image_path)
 
-                    image_field = '<img src="' + new_filename + '" />'
-                    new_note.fields[field_index] = image_field
+            # Create a new Note to add image to
+            new_note = mw.col.newNote()
+            new_note.model()["did"] = self.deck["id"]
 
-                    mw.col.addNote(new_note)
+            image_field = '<img src="' + new_filename + '" />'
+            new_note.fields[self.field_index] = image_field
+
+            mw.col.addNote(new_note)
+
+            # progressbar.setValue(idx * progressbar_steps)
+            progress.setValue((idx + 1) * progressbar_steps)
+
+            if(progress.wasCanceled()):
+                break
+
+            time.sleep(0.05)
 
         mw.col.save()
-
-    def OnReject(self):
-        # QDialog.reject(self)
-        self.close()
+        showInfo("Sucess!")
 
 
 def StartApplication() -> None:
