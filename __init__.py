@@ -140,14 +140,14 @@ class AnkiImageImport(QDialog):
         progress.setWindowModality(Qt.ApplicationModal)
         progress.setLabelText("Generating Cards from Images...")
         progress.setMaximum(100)
-        progress.setMinimumDuration(0)      # time delay before showing progress bar
+        progress.setMinimumDuration(2000)      # time delay before showing progress bar
         progress.setCancelButton(None)      # remove cancel button
         progress.setMinimumWidth(350)       # window width
         progress.setAutoClose(True)         # close after 100%
 
-        progress.setValue(0)
-        progress.setValue(1)
-        progress.setValue(0)
+        #progress.setValue(0)
+        #progress.setValue(1)
+        #progress.setValue(0)
 
         progressbar_steps = 100 / len(self.image_paths)
 
@@ -170,7 +170,7 @@ class AnkiImageImport(QDialog):
             if(progress.wasCanceled()):
                 break
 
-            time.sleep(0.05)
+            # time.sleep(0.05)
 
         mw.col.save()
         showInfo("Sucess!")
