@@ -1,16 +1,21 @@
+import time
 from aqt import mw
 from aqt.utils import showInfo, qconnect
 from aqt.qt import *
-import time
 
 
 class AnkiImageImport(QDialog):
     def __init__(self):
         super(AnkiImageImport, self).__init__(parent=mw)
 
+        self.folderpath = ""
+        self.image_paths = []
+        self.deck = None
+        self.field_index = None
+
         self.CreateFormGroupBox()
 
-        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Close)
         buttonBox.accepted.connect(self.StartButtonFunction)
         buttonBox.rejected.connect(self.reject)
 
@@ -167,7 +172,7 @@ class AnkiImageImport(QDialog):
             # progressbar.setValue(idx * progressbar_steps)
             progress.setValue((idx + 1) * progressbar_steps)
 
-            if(progress.wasCanceled()):
+            if progress.wasCanceled():
                 break
 
             # time.sleep(0.05)
