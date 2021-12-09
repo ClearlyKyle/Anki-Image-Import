@@ -65,6 +65,8 @@ class AnkiImageImport(QDialog):
         main_layout = QHBoxLayout()
 
         self.formGroupBox = QGroupBox("Settings")
+        self.formGroupBox.setMaximumSize(QSize(225, 300))  # (w, h)
+        self.formGroupBox.setMinimumSize(QSize(225, 0))
         layout = QFormLayout()
 
         # Decks
@@ -88,7 +90,7 @@ class AnkiImageImport(QDialog):
         self.formGroupBox.setLayout(layout)
 
         # Now added the left side to the MAIN_LAYOUT
-        main_layout.addWidget(self.formGroupBox)
+        main_layout.addWidget(self.formGroupBox, 30)
 
         # ---------------------------------------------------
         # RIGHT SIDE
@@ -177,7 +179,7 @@ class AnkiImageImport(QDialog):
 
         # Add to main
         # Add the right side to the main layout
-        main_layout.addWidget(self.RIGHT_groupbox)
+        main_layout.addWidget(self.RIGHT_groupbox, 70)
 
         self.setLayout(main_layout)
 
